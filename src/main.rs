@@ -90,6 +90,13 @@ impl<T: FiniteField> ExampleWorker<T> {
         }
         stage_shares[stage].insert(from_worker, a_b_share_shifted);
     }
+
+    fn get_share(&self, stage: usize, from_worker: usize) -> Option<(T, T)> {
+        let stage_shares = self.stage_shares.lock().unwrap();
+        stage_shares[stage]
+            .get(&from_worker)
+            .map(|x| (x.0.clone(), x.1.clone()))
+    }
 }
 
 impl<T: FiniteField> Base<T> for ExampleWorker<T> {
@@ -136,9 +143,10 @@ impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
         }
     }
     fn wait_for_broadcast(&self, stage: usize) -> (T, T) {
+        let self_shares = self.get_share(stage, self.index).unwrap();
         let peer_workers = self.peer_workers.lock().unwrap();
-        let mut sum_a_share_shifted = T::zero();
-        let mut sum_b_share_shifted = T::zero();
+        let mut sum_a_share_shifted = self_shares.0;
+        let mut sum_b_share_shifted = self_shares.1;
         for w in peer_workers.iter() {
             let (a_share_shifted, b_share_shifted) = w.receive_share(stage);
             sum_a_share_shifted = sum_a_share_shifted.add(&a_share_shifted);
