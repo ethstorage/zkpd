@@ -231,6 +231,6 @@ fn main() {
 
     let result = d.delegate(vec![x]);
 
-    println!("result:{:?}", result);
+    println!("result:{:?}, expected:{:?}", result, expected);
     assert!(result.len() == 1 && result[0] == expected);
 }
