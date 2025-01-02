@@ -75,7 +75,7 @@ fn setup_random_shares(n: usize) -> Vec<Vec<(Bls381K12Scalar, Bls381K12Scalar, B
 struct ExampleWorker<T: FiniteField> {
     _marker: std::marker::PhantomData<T>,
     index: usize,
-    peer_workers: Mutex<Vec<Arc<Box<dyn WorkerClient<T>>>>>,
+    peer_workers: Mutex<Vec<Arc<dyn WorkerClient<T>>>>,
     stage_shares: Mutex<Vec<HashMap<usize, (T, T)>>>,
 }
 
@@ -179,11 +179,9 @@ impl<'a, T: FiniteField> Base<T> for ExampleWorkerClient<T> {
 }
 
 impl<T: FiniteField> WorkerClient<T> for ExampleWorkerClient<T> {
-    fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>) {
-        let mut peer_workers = peer_workers;
-        peer_workers.retain(|x| x.index() != self.worker.index());
+    fn set_peer_workers(&self, _peer_workers: Vec<Arc<dyn WorkerClient<T>>>) {
         let mut peer_workers = self.worker.peer_workers.lock().unwrap();
-        *peer_workers = peer_workers.clone();
+        *peer_workers = _peer_workers;
     }
 
     fn send_share(&self, from_worker: usize, a_b_share_shifted: (T, T), stage: usize) {
