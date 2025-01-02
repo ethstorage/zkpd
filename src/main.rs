@@ -52,8 +52,7 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
 fn setup_random_shares(n: usize) -> Vec<Vec<(Bls381K12Scalar, Bls381K12Scalar, Bls381K12Scalar)>> {
     let r1 = BeaverTripleGeneratoorImpl::<Bls381K12Scalar>::generate();
     let r2 = BeaverTripleGeneratoorImpl::<Bls381K12Scalar>::generate();
-    let r3 = BeaverTripleGeneratoorImpl::<Bls381K12Scalar>::generate();
-    let rs = vec![r1, r2, r3];
+    let rs = vec![r1, r2];
 
     let mut result = vec![];
     for _i in 0..n {
