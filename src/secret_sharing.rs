@@ -31,7 +31,12 @@ impl<T: crate::FiniteField> crate::SecretSharing<T> for SecretSharing<T> {
         let mut secret = T::zero();
         for i in 0..shares.len() {
             let original_index_i = indexes[i];
-            assert!(original_index_i <= n, "index out of bound");
+            assert!(
+                original_index_i <= n,
+                "index out of bound, original_index_i:{}, n:{}",
+                original_index_i,
+                n
+            );
             let mut num = T::one();
             let mut den = T::one();
             for j in 0..shares.len() {

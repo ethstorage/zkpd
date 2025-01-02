@@ -1,5 +1,6 @@
 use core::panic;
 use std::collections::HashMap;
+use std::iter;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -110,6 +111,7 @@ impl<T: FiniteField> Base<T> for ExampleWorker<T> {
             input_shares[0].clone(),
             &beaver_triple_shares[0],
         );
+        // return vec![x_2.mul(&T::from_usize(3)).add(&T::from_usize(2))];
         let x_3 = self.multiply(
             1,
             x_2.clone(),
@@ -144,14 +146,21 @@ impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
     fn wait_for_broadcast(&self, stage: usize) -> (T, T) {
         let self_shares = self.get_share(stage, self.index).unwrap();
         let peer_workers = self.peer_workers.lock().unwrap();
-        let mut sum_a_share_shifted = self_shares.0;
-        let mut sum_b_share_shifted = self_shares.1;
+        let mut a_shares_shifted = vec![self_shares.0];
+        let mut b_shares_shifted = vec![self_shares.1];
         for w in peer_workers.iter() {
             let (a_share_shifted, b_share_shifted) = w.receive_share(stage);
-            sum_a_share_shifted = sum_a_share_shifted.add(&a_share_shifted);
-            sum_b_share_shifted = sum_b_share_shifted.add(&b_share_shifted);
+            a_shares_shifted.push(a_share_shifted);
+            b_shares_shifted.push(b_share_shifted);
         }
-        (sum_a_share_shifted, sum_b_share_shifted)
+        let indices: Vec<_> = iter::once(self.index)
+            .chain(peer_workers.iter().map(|w| w.index()))
+            .collect();
+        let n = 1 + peer_workers.len();
+        (
+            SecretSharingImpl::recover(a_shares_shifted, indices.clone(), n, n),
+            SecretSharingImpl::recover(b_shares_shifted, indices, n, n),
+        )
     }
 }
 
@@ -186,11 +195,13 @@ impl<T: FiniteField> WorkerClient<T> for ExampleWorkerClient<T> {
         loop {
             let stage_shares = self.worker.stage_shares.lock().unwrap();
             if stage_shares.len() != stage + 1 {
+                println!("waiting for stage {}", stage);
                 drop(stage_shares);
                 thread::sleep(Duration::from_millis(100));
                 continue;
             }
             if !stage_shares[stage].contains_key(&self.worker.index) {
+                println!("waiting for stage {} from self", stage);
                 drop(stage_shares);
                 thread::sleep(Duration::from_millis(100));
                 continue;
@@ -207,6 +218,8 @@ fn main() {
         + Bls381K12Scalar::from_usize(5) * x * x
         + Bls381K12Scalar::from_usize(3) * x
         + Bls381K12Scalar::from_usize(2);
+
+    // let expected = Bls381K12Scalar::from_usize(3) * x * x + Bls381K12Scalar::from_usize(2);
 
     // zkpd for x^3 + 5x^2 + 3x + 2
 
@@ -237,7 +250,6 @@ fn main() {
     let d = ExampleDelegator::<Bls381K12Scalar>::new(worker_clients);
 
     let result = d.delegate(vec![x]);
-
     println!("result:{:?}, expected:{:?}", result, expected);
     assert!(result.len() == 1 && result[0] == expected);
 }
