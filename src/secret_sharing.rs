@@ -58,9 +58,10 @@ impl<T: crate::FiniteField> crate::SecretSharing<T> for SecretSharing<T> {
 fn share_and_recover_works() {
     use crate::ff::bls12_381::Bls381K12Scalar;
     use crate::{FiniteField, SecretSharing as SecretSharingTrait};
-    let shares = SecretSharing::share(Bls381K12Scalar::from_usize(100), 5, 5);
-    println!(
-        "recover: {:?}",
+    let secret = Bls381K12Scalar::random();
+    let shares = SecretSharing::share(FiniteField::clone(&secret), 5, 5);
+    assert_eq!(
+        secret,
         SecretSharing::recover(shares, vec![1, 2, 3, 4, 5], 5, 5)
     );
 }
