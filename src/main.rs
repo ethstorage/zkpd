@@ -1,6 +1,8 @@
 use core::panic;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 use zkpd::ff::bls12_381::Bls381K12Scalar;
 use zkpd::secret_sharing::SecretSharing as SecretSharingImpl;
@@ -33,11 +35,17 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
 
         let input_shares =
             SecretSharingImpl::share(inputs[0], self.workers.len(), self.workers.len());
+        let mut output_shares = vec![];
         for worker in self.workers.iter() {
             let idx = worker.index() - 1;
-            worker.work(random_shares[idx].clone(), vec![input_shares[idx]]);
+            output_shares.push(worker.work(random_shares[idx].clone(), vec![input_shares[idx]])[0]);
         }
-        vec![]
+        vec![SecretSharingImpl::recover(
+            output_shares,
+            (self.workers.iter().map(|w| w.index())).collect(),
+            self.workers.len(),
+            self.workers.len(),
+        )]
     }
 }
 
@@ -71,6 +79,19 @@ struct ExampleWorker<T: FiniteField> {
     stage_shares: Mutex<Vec<HashMap<usize, (T, T)>>>,
 }
 
+impl<T: FiniteField> ExampleWorker<T> {
+    fn insert_share(&self, stage: usize, from_worker: usize, a_b_share_shifted: (T, T)) {
+        let mut stage_shares = self.stage_shares.lock().unwrap();
+        if stage_shares.len() == stage {
+            stage_shares.push(HashMap::new());
+        } else if stage_shares.len() == stage + 1 {
+        } else {
+            panic!("invalid stage");
+        }
+        stage_shares[stage].insert(from_worker, a_b_share_shifted);
+    }
+}
+
 impl<T: FiniteField> Base<T> for ExampleWorker<T> {
     fn index(&self) -> usize {
         self.index
@@ -99,7 +120,13 @@ impl<T: FiniteField> Base<T> for ExampleWorker<T> {
 
 impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
     fn broadcast(&self, a_b_share_shifted: (T, T), stage: usize) {
+        self.insert_share(
+            stage,
+            self.index,
+            (a_b_share_shifted.0.clone(), a_b_share_shifted.1.clone()),
+        );
         let peer_workers = self.peer_workers.lock().unwrap();
+
         for w in peer_workers.iter() {
             w.send_share(
                 self.index(),
@@ -108,12 +135,12 @@ impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
             );
         }
     }
-    fn wait_for_broadcast(&self) -> (T, T) {
+    fn wait_for_broadcast(&self, stage: usize) -> (T, T) {
         let peer_workers = self.peer_workers.lock().unwrap();
         let mut sum_a_share_shifted = T::zero();
         let mut sum_b_share_shifted = T::zero();
         for w in peer_workers.iter() {
-            let (a_share_shifted, b_share_shifted) = w.receive_share();
+            let (a_share_shifted, b_share_shifted) = w.receive_share(stage);
             sum_a_share_shifted = sum_a_share_shifted.add(&a_share_shifted);
             sum_b_share_shifted = sum_b_share_shifted.add(&b_share_shifted);
         }
@@ -144,19 +171,26 @@ impl<T: FiniteField> WorkerClient<T> for ExampleWorkerClient<T> {
     }
 
     fn send_share(&self, from_worker: usize, a_b_share_shifted: (T, T), stage: usize) {
-        let mut stage_shares = self.worker.stage_shares.lock().unwrap();
-        assert!(stage_shares.len() == stage || stage_shares.len() + 1 == stage);
-        if stage_shares.len() == stage {
-            stage_shares.push(HashMap::new());
-        } else if stage_shares.len() == stage + 1 {
-        } else {
-            panic!("invalid stage");
-        }
-        stage_shares[stage].insert(from_worker, a_b_share_shifted);
+        self.worker
+            .insert_share(stage, from_worker, a_b_share_shifted);
     }
 
-    fn receive_share(&self) -> (T, T) {
-        self.worker.wait_for_broadcast()
+    fn receive_share(&self, stage: usize) -> (T, T) {
+        loop {
+            let stage_shares = self.worker.stage_shares.lock().unwrap();
+            if stage_shares.len() != stage + 1 {
+                drop(stage_shares);
+                thread::sleep(Duration::from_millis(100));
+                continue;
+            }
+            if !stage_shares[stage].contains_key(&self.worker.index) {
+                drop(stage_shares);
+                thread::sleep(Duration::from_millis(100));
+                continue;
+            }
+            let tuple = stage_shares[stage].get(&self.worker.index).unwrap();
+            return (tuple.0.clone(), tuple.1.clone());
+        }
     }
 }
 fn main() {
@@ -197,5 +231,6 @@ fn main() {
 
     let result = d.delegate(vec![x]);
 
+    println!("result:{:?}", result);
     assert!(result.len() == 1 && result[0] == expected);
 }
