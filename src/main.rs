@@ -78,7 +78,10 @@ impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
     }
 
     fn work(&self, beaver_triple_shares: Vec<(T, T, T)>, input_shares: Vec<T>) -> Vec<T> {
-        vec![]
+        let x_2 = self.multiply(0, input_shares[0].clone(), input_shares[0].clone(), &beaver_triple_shares[0]);
+        let x_3 = self.multiply(1, x_2.clone(), input_shares[0].clone(), &beaver_triple_shares[1]);
+        let target = x_3 .add( &x_2.mul(&T::from_usize(5))).add(&input_shares[0].clone().mul(&T::from_usize(3))).add(&T::from_usize(2));
+        vec![target]
     }
     fn broadcast(&self, a_share_shifted: T, b_share_shifted: T, stage: usize) {
         let peer_workers = self.peer_workers.lock().unwrap();

@@ -39,13 +39,13 @@ pub trait Worker<T: FiniteField> {
     fn work(&self, beaver_triple_shares: Vec<(T, T, T)>, input_shares: Vec<T>) -> Vec<T>;
     fn broadcast(&self, a_share_shifted: T, b_share_shifted: T, stage: usize);
     fn wait_for_broadcast(&self) -> (T, T);
-    fn multiply(&self, stage: usize, a_share: T, b_share: T, r: (T, T, T)) -> T {
+    fn multiply(&self, stage: usize, a_share: T, b_share: T, r: &(T, T, T)) -> T {
         let (alpha, beta, gamma) = r;
-        let a_share_shifted = a_share.sub(&alpha);
-        let b_share_shifted = b_share.sub(&beta);
+        let a_share_shifted = a_share.sub(alpha);
+        let b_share_shifted = b_share.sub(beta);
         self.broadcast(a_share_shifted, b_share_shifted, stage);
         let (sum_a_share_shifted, sum_b_share_shifted) = self.wait_for_broadcast();
 
-        gamma.add(&sum_a_share_shifted.clone().mul(&beta)).add(&sum_b_share_shifted.clone().mul(&alpha)).add(&sum_a_share_shifted.mul(&sum_b_share_shifted))
+        gamma.clone().add(&sum_a_share_shifted.clone().mul(&beta)).add(&sum_b_share_shifted.clone().mul(&alpha)).add(&sum_a_share_shifted.mul(&sum_b_share_shifted))
     }
 }
