@@ -199,7 +199,10 @@ impl<T: FiniteField> WorkerClient<T> for ExampleWorkerClient<T> {
                 continue;
             }
             if !stage_shares[stage].contains_key(&self.worker.index) {
-                println!("waiting for stage {} from self", stage);
+                println!(
+                    "waiting for stage {} from worker {}",
+                    stage, self.worker.index
+                );
                 drop(stage_shares);
                 thread::sleep(Duration::from_millis(100));
                 continue;
