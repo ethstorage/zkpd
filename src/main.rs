@@ -1,3 +1,5 @@
+use core::panic;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use zkpd::ff::bls12_381::Bls381K12Scalar;
@@ -66,6 +68,7 @@ struct ExampleWorker<T: FiniteField> {
     _marker: std::marker::PhantomData<T>,
     index: usize,
     peer_workers: Mutex<Vec<Arc<Box<dyn WorkerClient<T>>>>>,
+    stage_shares: Mutex<Vec<HashMap<usize, (T, T)>>>,
 }
 
 impl<T: FiniteField> Base<T> for ExampleWorker<T> {
@@ -99,6 +102,7 @@ impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
         let peer_workers = self.peer_workers.lock().unwrap();
         for w in peer_workers.iter() {
             w.send_share(
+                self.index(),
                 (a_b_share_shifted.0.clone(), a_b_share_shifted.1.clone()),
                 stage,
             );
@@ -139,7 +143,17 @@ impl<T: FiniteField> WorkerClient<T> for ExampleWorkerClient<T> {
         *peer_workers = peer_workers.clone();
     }
 
-    fn send_share(&self, a_b_share_shifted: (T, T), stage: usize) {}
+    fn send_share(&self, from_worker: usize, a_b_share_shifted: (T, T), stage: usize) {
+        let mut stage_shares = self.worker.stage_shares.lock().unwrap();
+        assert!(stage_shares.len() == stage || stage_shares.len() + 1 == stage);
+        if stage_shares.len() == stage {
+            stage_shares.push(HashMap::new());
+        } else if stage_shares.len() == stage + 1 {
+        } else {
+            panic!("invalid stage");
+        }
+        stage_shares[stage].insert(from_worker, a_b_share_shifted);
+    }
 
     fn receive_share(&self) -> (T, T) {
         self.worker.wait_for_broadcast()
@@ -159,11 +173,13 @@ fn main() {
         _marker: std::marker::PhantomData,
         index: 1,
         peer_workers: Mutex::new(vec![]),
+        stage_shares: Mutex::new(vec![]),
     };
     let w2 = ExampleWorker::<Bls381K12Scalar> {
         _marker: std::marker::PhantomData,
         index: 2,
         peer_workers: Mutex::new(vec![]),
+        stage_shares: Mutex::new(vec![]),
     };
     let c1 = ExampleWorkerClient::<Bls381K12Scalar> {
         _marker: std::marker::PhantomData,

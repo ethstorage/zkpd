@@ -58,6 +58,6 @@ pub trait Worker<T: FiniteField>: Base<T> {
 
 pub trait WorkerClient<T: FiniteField>: Base<T> {
     fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>);
-    fn send_share(&self, a_b_share_shifted: (T, T), stage: usize);
+    fn send_share(&self, from_worker: usize, a_b_share_shifted: (T, T), stage: usize);
     fn receive_share(&self) -> (T, T);
 }
