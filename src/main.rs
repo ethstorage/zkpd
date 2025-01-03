@@ -1,4 +1,6 @@
 use core::panic;
+use rayon::iter::IntoParallelRefIterator;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::iter;
 use std::sync::{Arc, Mutex};
@@ -36,11 +38,19 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
 
         let input_shares =
             SecretSharingImpl::share(inputs[0], self.workers.len(), self.workers.len());
-        let mut output_shares = vec![];
-        for worker in self.workers.iter() {
-            let idx = worker.index() - 1;
-            output_shares.push(worker.work(random_shares[idx].clone(), vec![input_shares[idx]])[0]);
-        }
+
+        let output_shares = self
+            .workers
+            .par_iter()
+            .map(|worker| {
+                let idx = worker.index() - 1;
+                worker.work(
+                    random_shares[idx].clone(),
+                    vec![FiniteField::clone(&input_shares[idx])],
+                )[0]
+            })
+            .collect();
+
         vec![SecretSharingImpl::recover(
             output_shares,
             (self.workers.iter().map(|w| w.index())).collect(),

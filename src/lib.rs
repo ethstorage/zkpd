@@ -6,7 +6,7 @@ pub mod beaver_triple_generatoor;
 pub mod ff;
 pub mod secret_sharing;
 
-pub trait FiniteField {
+pub trait FiniteField: Send + Sync {
     fn random() -> Self;
     fn zero() -> Self;
     fn one() -> Self;
@@ -56,7 +56,8 @@ pub trait Worker<T: FiniteField>: Base<T> {
     }
 }
 
-pub trait WorkerClient<T: FiniteField>: Base<T> {
+// Send + Sync is required to make Vec<Arc<WorkerClient<T>>> implement rayon::ParallelIterator
+pub trait WorkerClient<T: FiniteField>: Base<T> + Send + Sync {
     fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>);
     fn send_share(&self, from_worker: usize, a_b_share_shifted: (T, T), stage: usize);
     fn receive_share(&self, stage: usize) -> (T, T);

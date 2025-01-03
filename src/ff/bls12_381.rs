@@ -1,6 +1,7 @@
 use ff2::*;
 use rand::rngs::OsRng;
 
+/// TODO: how Bls381K12Scalar implements Send and Sync?
 /// The BLS12-381 scalar field.
 #[derive(PrimeField)]
 #[PrimeFieldModulus = "52435875175126190479447740508185965837690552500527637822603658699938581184513"]
