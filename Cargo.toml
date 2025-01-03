@@ -7,3 +7,8 @@ edition = "2021"
 ff = { version = "0.13", features = ["derive"] }
 rand = "0.8"
 rayon = "1.7"
+
+
+[[bin]]
+name = "hello"
+path = "bin/hello.rs"
