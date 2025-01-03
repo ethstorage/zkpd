@@ -1,7 +1,10 @@
 use ff2::*;
 use rand::rngs::OsRng;
 
-/// TODO: how Bls381K12Scalar implements Send and Sync?
+/// how does Bls381K12Scalar implement Send and Sync?
+/// FYI: https://doc.rust-lang.org/nomicon/send-and-sync.html
+/// TLDR: most types are Send and Sync, as long as they don't wrap any pointer types.
+///
 /// The BLS12-381 scalar field.
 #[derive(PrimeField)]
 #[PrimeFieldModulus = "52435875175126190479447740508185965837690552500527637822603658699938581184513"]
