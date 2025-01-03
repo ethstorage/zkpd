@@ -56,7 +56,7 @@ pub trait Worker<T: FiniteField>: Base<T> {
     }
 }
 
-// Send + Sync is required to make Vec<Arc<WorkerClient<T>>> implement rayon::ParallelIterator
+// Send + Sync is required to make Vec<Arc<dyn WorkerClient<T>>> implement rayon::ParallelIterator
 pub trait WorkerClient<T: FiniteField>: Base<T> + Send + Sync {
     fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>);
     fn send_share(&self, from_worker: usize, a_b_share_shifted: (T, T), stage: usize);
