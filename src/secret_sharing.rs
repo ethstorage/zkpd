@@ -67,6 +67,10 @@ fn share_and_recover_works() {
     let shares = SecretSharing::share(FiniteField::clone(&secret), 5, 5);
     assert_eq!(
         secret,
-        SecretSharing::recover(shares, vec![1, 2, 3, 4, 5], 5, 5)
+        SecretSharing::recover(shares.clone(), vec![1, 2, 3, 4, 5], 5, 5)
+    );
+    assert_ne!(
+        secret,
+        SecretSharing::recover(shares, vec![1, 2, 4, 5, 3], 5, 5)
     );
 }
