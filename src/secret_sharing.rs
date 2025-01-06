@@ -1,3 +1,4 @@
+use crate::util::evaluations;
 use std::marker::PhantomData;
 
 pub struct SecretSharing<T: crate::FiniteField> {
@@ -6,21 +7,12 @@ pub struct SecretSharing<T: crate::FiniteField> {
 
 impl<T: crate::FiniteField> crate::SecretSharing<T> for SecretSharing<T> {
     fn share(secret: T, n: usize, t: usize) -> Vec<T> {
-        let mut shares = Vec::new();
         let mut poly = Vec::new();
         poly.push(secret);
         for _ in 1..t {
             poly.push(T::random());
         }
-        for i in 0..n {
-            let mut share = poly[t - 1].clone();
-            let x = T::from_usize(i + 1);
-            for j in (0..t - 1).rev() {
-                share = T::horner_fold(&share, &poly[j], &x);
-            }
-            shares.push(share);
-        }
-        shares
+        evaluations(&poly, n)
     }
 
     fn recover(shares: Vec<T>, indexes: Vec<usize>, n: usize, t: usize) -> T {
