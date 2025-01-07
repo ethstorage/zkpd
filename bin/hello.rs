@@ -13,7 +13,7 @@ use zkpd::{
     beaver_triple_generatoor::BeaverTripleGeneratoor as BeaverTripleGeneratoorImpl,
     BeaverTripleGeneratoor, FiniteField, SecretSharing,
 };
-use zkpd::{Base, Delegator, Worker, WorkerClient};
+use zkpd::{Base, Delegator, ScalarWorker as Worker, WorkerClient};
 
 struct ExampleDelegator<T: FiniteField> {
     _marker: std::marker::PhantomData<T>,
