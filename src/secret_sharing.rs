@@ -1,4 +1,4 @@
-use crate::util::evaluations;
+use crate::util::{evaluations, interpolate_eval};
 use std::marker::PhantomData;
 
 pub struct SecretSharing<T: crate::FiniteField> {
@@ -20,34 +20,21 @@ impl<T: crate::FiniteField> crate::SecretSharing<T> for SecretSharing<T> {
             shares.len() == indexes.len() && shares.len() == t,
             "size mismatch"
         );
-        let mut secret = T::zero();
-        for i in 0..shares.len() {
-            let original_index_i = indexes[i];
-            assert!(
-                original_index_i <= n,
-                "index out of bound, original_index_i:{}, n:{}",
-                original_index_i,
-                n
-            );
-            let mut num = T::one();
-            let mut den = T::one();
-            for j in 0..shares.len() {
-                if i == j {
-                    continue;
-                }
-                let original_index_j = indexes[j];
-                assert!(original_index_j <= n, "index out of bound");
+        interpolate_eval(
+            |i| {
+                let original_index_i = indexes[i];
                 assert!(
-                    original_index_i != original_index_j,
-                    "index should not be the same"
+                    original_index_i <= n,
+                    "index out of bound, original_index_i:{}, n:{}, i:{}",
+                    original_index_i,
+                    n,
+                    i
                 );
-                num = num.mul(&T::zero().sub(&T::from_usize(original_index_j)));
-                den =
-                    den.mul(&T::from_usize(original_index_i).sub(&T::from_usize(original_index_j)));
-            }
-            secret = secret.add(&shares[i].clone().mul(&num.div(&den)));
-        }
-        secret
+                T::from_usize(original_index_i)
+            },
+            &shares,
+            &T::zero(),
+        )
     }
 }
 

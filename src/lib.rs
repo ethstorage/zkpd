@@ -7,7 +7,7 @@ pub mod ff;
 pub mod secret_sharing;
 mod util;
 
-pub trait FiniteField: Send + Sync {
+pub trait FiniteField: Send + Sync + PartialEq {
     fn random() -> Self;
     fn zero() -> Self;
     fn one() -> Self;
