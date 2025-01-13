@@ -44,10 +44,7 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
             .par_iter()
             .map(|worker| {
                 let idx = worker.index() - 1;
-                worker.work(
-                    random_shares[idx].clone(),
-                    vec![FiniteField::clone(&input_shares[idx])],
-                )[0]
+                worker.work(random_shares[idx].clone(), vec![input_shares[idx].clone()])[0]
             })
             .collect();
 
@@ -246,6 +243,12 @@ fn main() {
         peer_workers: Mutex::new(vec![]),
         stage_shares: Mutex::new(vec![]),
     };
+    let w3 = ExampleWorker::<Bls381K12Scalar> {
+        _marker: std::marker::PhantomData,
+        index: 3,
+        peer_workers: Mutex::new(vec![]),
+        stage_shares: Mutex::new(vec![]),
+    };
     let c1 = ExampleWorkerClient::<Bls381K12Scalar> {
         _marker: std::marker::PhantomData,
         worker: Arc::new(w1),
@@ -254,9 +257,13 @@ fn main() {
         _marker: std::marker::PhantomData,
         worker: Arc::new(w2),
     };
+    let c3 = ExampleWorkerClient::<Bls381K12Scalar> {
+        _marker: std::marker::PhantomData,
+        worker: Arc::new(w3),
+    };
 
     let worker_clients: Vec<Arc<dyn WorkerClient<Bls381K12Scalar>>> =
-        vec![Arc::new(c1), Arc::new(c2)];
+        vec![Arc::new(c1), Arc::new(c2), Arc::new(c3)];
 
     let d = ExampleDelegator::<Bls381K12Scalar>::new(worker_clients);
 

@@ -6,9 +6,9 @@ pub mod beaver_triple_generatoor;
 pub mod ff;
 pub mod secret_sharing;
 mod util;
-use util::is_power_of_two;
+use util::{evaluations, is_power_of_two};
 
-pub trait FiniteField: Send + Sync + PartialEq {
+pub trait FiniteField: Send + Sync + PartialEq + Clone {
     fn random() -> Self;
     fn zero() -> Self;
     fn one() -> Self;
@@ -19,7 +19,6 @@ pub trait FiniteField: Send + Sync + PartialEq {
     fn sub(self, other: &Self) -> Self;
     fn add(self, other: &Self) -> Self;
     fn div(self, other: &Self) -> Self;
-    fn clone(&self) -> Self;
 }
 
 pub trait SecretSharing<T: FiniteField> {
@@ -74,8 +73,8 @@ pub trait PolyWorker<T: FiniteField>: Base<T> {
         } else {
             a_poly_shares.len() + b_poly_shares.len() - 1
         };
-        let a_evaluations = Self::evaluations(a_poly_shares, n);
-        let b_evaluations = Self::evaluations(b_poly_shares, n);
+        let a_evaluations = evaluations(&a_poly_shares, n);
+        let b_evaluations = evaluations(&b_poly_shares, n);
         let mut to_broadcast = vec![];
         for i in 0..n {
             let a_share = a_evaluations[i].clone();
@@ -105,21 +104,7 @@ pub trait PolyWorker<T: FiniteField>: Base<T> {
 
     fn broadcast_poly(&self, _a_b_share_shifted: Vec<(T, T)>, _stage: usize);
     fn wait_for_broadcast_poly(&self, _stage: usize) -> Vec<(T, T)>;
-    fn evaluations(poly_shares: Vec<T>, n: usize) -> Vec<T> {
-        if is_power_of_two(n) {
-            panic!("To be implemented");
-        } else {
-            let mut evaluations = vec![];
-            for i in 0..n {
-                let mut sum = T::zero();
-                for (j, share) in poly_shares.iter().enumerate() {
-                    sum = T::horner_fold(&sum, share, &T::from_usize(j));
-                }
-                evaluations.push(sum);
-            }
-            return evaluations;
-        }
-    }
+
     fn interpolate(evaluations: Vec<T>, n: usize) -> Vec<T> {
         if is_power_of_two(n) {
             panic!("To be implemented");

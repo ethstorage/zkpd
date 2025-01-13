@@ -1,6 +1,11 @@
+use core::panic;
+
 use crate::FiniteField;
 
 pub fn evaluations<T: FiniteField>(poly: &[T], n: usize) -> Vec<T> {
+    if is_power_of_two(n) {
+        return evaluations_fft(poly, n);
+    }
     let mut evals = vec![];
     for i in 0..n {
         let x = T::from_usize(i + 1);
@@ -11,6 +16,24 @@ pub fn evaluations<T: FiniteField>(poly: &[T], n: usize) -> Vec<T> {
         evals.push(eval);
     }
     evals
+}
+
+fn evaluations_fft<T: FiniteField>(poly: &[T], n: usize) -> Vec<T> {
+    panic!("To be implemented");
+    // let mut evals = vec![T::zero(); n];
+    // let mut poly = poly.to_vec();
+    // poly.resize(n, T::zero());
+    // let omega = T::get_root_of_unity(n);
+    // let mut omega_power = T::one();
+    // for i in 0..n {
+    //     let mut eval = T::zero();
+    //     for j in 0..n {
+    //         eval = eval.add(&poly[j].clone().mul(&omega_power.pow(&j)));
+    //     }
+    //     evals[i] = eval;
+    //     omega_power = omega_power.mul(&omega);
+    // }
+    // evals
 }
 
 pub fn interpolate_eval<T: FiniteField, Func: Fn(usize) -> T>(
@@ -37,6 +60,17 @@ pub fn interpolate_eval<T: FiniteField, Func: Fn(usize) -> T>(
             den = den.mul(&original_index_i.clone().sub(&original_index_j));
         }
         result = result.add(&values[i].clone().mul(&num.div(&den)));
+    }
+    result
+}
+
+pub fn naive_mul<T: FiniteField>(poly1: &[T], poly2: &[T]) -> Vec<T> {
+    let n = poly1.len() + poly2.len() - 1;
+    let mut result = vec![T::zero(); n];
+    for (i, coeff_i) in poly1.iter().enumerate() {
+        for (j, coeff_j) in poly2.iter().enumerate() {
+            result[i + j] = result[i + j].clone().add(&coeff_i.clone().mul(coeff_j));
+        }
     }
     result
 }
