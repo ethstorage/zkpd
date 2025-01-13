@@ -19,7 +19,7 @@ pub fn evaluations<T: FiniteField>(poly: &[T], n: usize) -> Vec<T> {
 }
 
 fn evaluations_fft<T: FiniteField>(poly: &[T], n: usize) -> Vec<T> {
-    panic!("To be implemented");
+    panic!("fft evaluation to be implemented");
     // let mut evals = vec![T::zero(); n];
     // let mut poly = poly.to_vec();
     // poly.resize(n, T::zero());
@@ -73,6 +73,47 @@ pub fn naive_mul<T: FiniteField>(poly1: &[T], poly2: &[T]) -> Vec<T> {
         }
     }
     result
+}
+
+pub fn naive_add<T: FiniteField>(poly1: &[T], poly2: &[T]) -> Vec<T> {
+    let n = poly1.len().max(poly2.len());
+    let mut result = vec![T::zero(); n];
+    for (i, coeff) in poly1.iter().enumerate() {
+        result[i] = result[i].clone().add(coeff);
+    }
+    for (i, coeff) in poly2.iter().enumerate() {
+        result[i] = result[i].clone().add(coeff);
+    }
+    result
+}
+
+pub fn scalar_mul<T: FiniteField>(poly: &[T], scalar: &T) -> Vec<T> {
+    poly.iter().map(|coeff| coeff.clone().mul(scalar)).collect()
+}
+
+pub fn scalar_div<T: FiniteField>(poly: &[T], scalar: &T) -> Vec<T> {
+    poly.iter().map(|coeff| coeff.clone().div(scalar)).collect()
+}
+
+pub fn interpolate<T: FiniteField>(evaluations: &[T], n: usize) -> Vec<T> {
+    assert!(evaluations.len() == n, "size mismatch");
+    if is_power_of_two(n) {
+        panic!("fft interpolate to be implemented");
+    }
+
+    let mut poly = vec![];
+    for i in 0..n {
+        let mut term = vec![evaluations[i].clone()];
+        for j in 0..n {
+            if j != i {
+                let den = T::from_usize(i + 1).sub(&T::from_usize(j + 1));
+                term = naive_mul(&term, &[T::from_usize(j + 1).minus(), T::one()]);
+                term = scalar_div(&term, &den);
+            }
+        }
+        poly = naive_add(&poly, &term);
+    }
+    poly
 }
 
 pub fn is_power_of_two(n: usize) -> bool {

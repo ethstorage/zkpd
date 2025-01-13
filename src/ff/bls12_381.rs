@@ -48,4 +48,7 @@ impl crate::FiniteField for Bls381K12Scalar {
     fn div(self, other: &Self) -> Self {
         self * other.invert().unwrap()
     }
+    fn minus(self) -> Self {
+        -self
+    }
 }

@@ -6,7 +6,7 @@ pub mod beaver_triple_generatoor;
 pub mod ff;
 pub mod secret_sharing;
 mod util;
-use util::{evaluations, is_power_of_two};
+use util::{evaluations, interpolate, is_power_of_two};
 
 pub trait FiniteField: Send + Sync + PartialEq + Clone {
     fn random() -> Self;
@@ -19,6 +19,7 @@ pub trait FiniteField: Send + Sync + PartialEq + Clone {
     fn sub(self, other: &Self) -> Self;
     fn add(self, other: &Self) -> Self;
     fn div(self, other: &Self) -> Self;
+    fn minus(self) -> Self;
 }
 
 pub trait SecretSharing<T: FiniteField> {
@@ -99,34 +100,11 @@ pub trait PolyWorker<T: FiniteField>: Base<T> {
                     .add(&sum_a_share_shifted.clone().mul(&sum_b_share_shifted)),
             );
         }
-        Self::interpolate(products, n)
+        interpolate(&products, n)
     }
 
     fn broadcast_poly(&self, _a_b_share_shifted: Vec<(T, T)>, _stage: usize);
     fn wait_for_broadcast_poly(&self, _stage: usize) -> Vec<(T, T)>;
-
-    fn interpolate(evaluations: Vec<T>, n: usize) -> Vec<T> {
-        if is_power_of_two(n) {
-            panic!("To be implemented");
-        } else {
-            let mut poly_shares = vec![];
-            for i in 0..n {
-                let mut sum = T::zero();
-                for (j, evaluation) in evaluations.iter().enumerate() {
-                    let mut product = evaluation.clone();
-                    for k in 0..n {
-                        if k != j {
-                            product = product.mul(&T::from_usize(i).sub(&T::from_usize(k)));
-                            product = product.div(&T::from_usize(j).sub(&T::from_usize(k)));
-                        }
-                    }
-                    sum = sum.add(&product);
-                }
-                poly_shares.push(sum);
-            }
-            return poly_shares;
-        }
-    }
 }
 
 // Send + Sync is required to make Vec<Arc<dyn WorkerClient<T>>> implement rayon::ParallelIterator
