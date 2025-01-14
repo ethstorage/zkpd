@@ -7,19 +7,34 @@ use zkpd::FiniteField;
 use zkpd::mode::poly::{Base, Delegator, Worker, WorkerClient};
 
 struct ExampleDelegator<T: FiniteField> {
-    _marker: std::marker::PhantomData<T>,
     workers: Vec<Arc<dyn WorkerClient<T>>>,
 }
 
+impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
+    fn delegate(
+        &self,
+        poly1: Vec<Bls381K12Scalar>,
+        poly2: Vec<Bls381K12Scalar>,
+    ) -> Vec<Bls381K12Scalar> {
+        vec![]
+    }
+
+    fn new(workers: Vec<Arc<dyn WorkerClient<Bls381K12Scalar>>>) -> Self {
+        for w in workers.iter() {
+            let mut peer_workers = workers.clone();
+            peer_workers.retain(|x| x.index() != w.index());
+            w.set_peer_workers(peer_workers);
+        }
+        ExampleDelegator { workers }
+    }
+}
 struct ExampleWorker<T: FiniteField> {
-    _marker: std::marker::PhantomData<T>,
     index: usize,
     peer_workers: Mutex<Vec<Arc<dyn WorkerClient<T>>>>,
     stage_shares: Mutex<Vec<HashMap<usize, (T, T)>>>,
 }
 
 struct ExampleWorkerClient<T: FiniteField> {
-    _marker: std::marker::PhantomData<T>,
     worker: Arc<ExampleWorker<T>>,
 }
 

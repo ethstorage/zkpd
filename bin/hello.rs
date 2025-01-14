@@ -16,7 +16,6 @@ use zkpd::{
 };
 
 struct ExampleDelegator<T: FiniteField> {
-    _marker: std::marker::PhantomData<T>,
     workers: Vec<Arc<dyn WorkerClient<T>>>,
 }
 
@@ -27,10 +26,7 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
             peer_workers.retain(|x| x.index() != w.index());
             w.set_peer_workers(peer_workers);
         }
-        ExampleDelegator {
-            _marker: std::marker::PhantomData,
-            workers,
-        }
+        ExampleDelegator { workers }
     }
     fn delegate(&self, inputs: Vec<Bls381K12Scalar>) -> Vec<Bls381K12Scalar> {
         assert!(inputs.len() == 1);
@@ -80,7 +76,6 @@ fn setup_random_shares(n: usize) -> Vec<Vec<(Bls381K12Scalar, Bls381K12Scalar, B
 }
 
 struct ExampleWorker<T: FiniteField> {
-    _marker: std::marker::PhantomData<T>,
     index: usize,
     peer_workers: Mutex<Vec<Arc<dyn WorkerClient<T>>>>,
     stage_shares: Mutex<Vec<HashMap<usize, (T, T)>>>,
@@ -172,7 +167,6 @@ impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
 }
 
 struct ExampleWorkerClient<T: FiniteField> {
-    _marker: std::marker::PhantomData<T>,
     worker: Arc<ExampleWorker<T>>,
 }
 
@@ -232,33 +226,27 @@ fn main() {
     // zkpd for x^3 + 5x^2 + 3x + 2
 
     let w1 = ExampleWorker::<Bls381K12Scalar> {
-        _marker: std::marker::PhantomData,
         index: 1,
         peer_workers: Mutex::new(vec![]),
         stage_shares: Mutex::new(vec![]),
     };
     let w2 = ExampleWorker::<Bls381K12Scalar> {
-        _marker: std::marker::PhantomData,
         index: 2,
         peer_workers: Mutex::new(vec![]),
         stage_shares: Mutex::new(vec![]),
     };
     let w3 = ExampleWorker::<Bls381K12Scalar> {
-        _marker: std::marker::PhantomData,
         index: 3,
         peer_workers: Mutex::new(vec![]),
         stage_shares: Mutex::new(vec![]),
     };
     let c1 = ExampleWorkerClient::<Bls381K12Scalar> {
-        _marker: std::marker::PhantomData,
         worker: Arc::new(w1),
     };
     let c2 = ExampleWorkerClient::<Bls381K12Scalar> {
-        _marker: std::marker::PhantomData,
         worker: Arc::new(w2),
     };
     let c3 = ExampleWorkerClient::<Bls381K12Scalar> {
-        _marker: std::marker::PhantomData,
         worker: Arc::new(w3),
     };
 
