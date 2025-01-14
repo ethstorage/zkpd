@@ -18,7 +18,7 @@ pub fn evaluations<T: FiniteField>(poly: &[T], n: usize) -> Vec<T> {
     evals
 }
 
-fn evaluations_fft<T: FiniteField>(poly: &[T], n: usize) -> Vec<T> {
+fn evaluations_fft<T: FiniteField>(_poly: &[T], _n: usize) -> Vec<T> {
     panic!("fft evaluation to be implemented");
     // let mut evals = vec![T::zero(); n];
     // let mut poly = poly.to_vec();
