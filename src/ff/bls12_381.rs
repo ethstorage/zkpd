@@ -1,3 +1,5 @@
+extern crate ff as ff2;
+
 use ff2::*;
 use rand::rngs::OsRng;
 

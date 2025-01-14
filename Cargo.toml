@@ -2,6 +2,8 @@
 name = "zkpd"
 version = "0.1.0"
 edition = "2021"
+# Specify the default binary to run
+default-run = "hello"
 
 [dependencies]
 ff = { version = "0.13", features = ["derive"] }
@@ -12,3 +14,7 @@ rayon = "1.7"
 [[bin]]
 name = "hello"
 path = "bin/hello.rs"
+
+[[bin]]
+name = "poly"
+path = "bin/poly.rs"

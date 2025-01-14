@@ -8,12 +8,12 @@ use std::thread;
 use std::time::Duration;
 
 use zkpd::ff::bls12_381::Bls381K12Scalar;
+use zkpd::mode::scalar::{Base, Delegator, Worker, WorkerClient};
 use zkpd::secret_sharing::SecretSharing as SecretSharingImpl;
 use zkpd::{
     beaver_triple_generatoor::BeaverTripleGeneratoor as BeaverTripleGeneratoorImpl,
     BeaverTripleGeneratoor, FiniteField, SecretSharing,
 };
-use zkpd::{Base, Delegator, ScalarWorker as Worker, WorkerClient};
 
 struct ExampleDelegator<T: FiniteField> {
     _marker: std::marker::PhantomData<T>,
