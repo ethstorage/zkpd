@@ -119,3 +119,15 @@ pub fn interpolate<T: FiniteField>(evaluations: &[T], n: usize) -> Vec<T> {
 pub fn is_power_of_two(n: usize) -> bool {
     n > 0 && (n & (n - 1)) == 0
 }
+
+#[test]
+fn eval_interpolate_works() {
+    use crate::ff::bls12_381::Bls381K12Scalar;
+    use crate::FiniteField;
+
+    let n = 10;
+    let rand_poly: Vec<Bls381K12Scalar> = (0..n).map(|_| Bls381K12Scalar::random()).collect();
+    let evals = evaluations(&rand_poly, n);
+    let recovered_poly = interpolate(&evals, n);
+    assert_eq!(recovered_poly, rand_poly);
+}
