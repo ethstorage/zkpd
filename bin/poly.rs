@@ -116,6 +116,27 @@ struct ExampleWorker<T: FiniteField> {
     stage_shares: Mutex<Vec<HashMap<usize, (T, T)>>>,
 }
 
+impl<T: FiniteField> Base<T> for ExampleWorker<T> {
+    fn index(&self) -> usize {
+        self.index
+    }
+    fn work(
+        &self,
+        beaver_triple_shares: Vec<(T, T, T)>,
+        poly1_shares: Vec<T>,
+        poly2_shares: Vec<T>,
+    ) -> Vec<T> {
+        self.multiply_poly(0, poly1_shares, poly2_shares, &beaver_triple_shares)
+    }
+}
+
+impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
+    fn broadcast_poly(&self, _a_b_share_shifted: Vec<(T, T)>, _stage: usize) {}
+    fn wait_for_broadcast_poly(&self, _stage: usize) -> Vec<(T, T)> {
+        vec![]
+    }
+}
+
 struct ExampleWorkerClient<T: FiniteField> {
     worker: Arc<ExampleWorker<T>>,
 }
