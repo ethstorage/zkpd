@@ -20,13 +20,13 @@ pub trait Worker<T: FiniteField>: Base<T> {
         let a_share_shifted = a_share.sub(alpha);
         let b_share_shifted = b_share.sub(beta);
         self.broadcast((a_share_shifted, b_share_shifted), stage);
-        let (sum_a_share_shifted, sum_b_share_shifted) = self.wait_for_broadcast(stage);
+        let (recovered_a_share_shifted, recovered_b_share_shifted) = self.wait_for_broadcast(stage);
 
         gamma
             .clone()
-            .add(&sum_a_share_shifted.clone().mul(&beta))
-            .add(&sum_b_share_shifted.clone().mul(&alpha))
-            .add(&sum_a_share_shifted.mul(&sum_b_share_shifted))
+            .add(&recovered_a_share_shifted.clone().mul(&beta))
+            .add(&recovered_b_share_shifted.clone().mul(&alpha))
+            .add(&recovered_a_share_shifted.mul(&recovered_b_share_shifted))
     }
 }
 

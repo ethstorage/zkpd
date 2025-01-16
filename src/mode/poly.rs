@@ -46,17 +46,23 @@ pub trait Worker<T: FiniteField>: Base<T> {
             to_broadcast.push((a_share_shifted, b_share_shifted));
         }
         self.broadcast_poly(to_broadcast, stage);
-        let sums = self.wait_for_broadcast_poly(stage);
+        let recovered_shares = self.wait_for_broadcast_poly(stage);
         let mut products = vec![];
-        for (i, (sum_a_share_shifted, sum_b_share_shifted)) in sums.iter().enumerate() {
+        for (i, (recovered_a_share_shifted, recovered_b_share_shifted)) in
+            recovered_shares.iter().enumerate()
+        {
             let r = &rs[i];
             let (alpha, beta, gamma) = r;
             products.push(
                 gamma
                     .clone()
-                    .add(&sum_a_share_shifted.clone().mul(&beta))
-                    .add(&sum_b_share_shifted.clone().mul(&alpha))
-                    .add(&sum_a_share_shifted.clone().mul(&sum_b_share_shifted)),
+                    .add(&recovered_a_share_shifted.clone().mul(&beta))
+                    .add(&recovered_b_share_shifted.clone().mul(&alpha))
+                    .add(
+                        &recovered_a_share_shifted
+                            .clone()
+                            .mul(&recovered_b_share_shifted),
+                    ),
             );
         }
         interpolate(&products, n)
@@ -69,6 +75,6 @@ pub trait Worker<T: FiniteField>: Base<T> {
 // Send + Sync is required to make Vec<Arc<dyn WorkerClient<T>>> implement rayon::ParallelIterator
 pub trait WorkerClient<T: FiniteField>: Base<T> + Send + Sync {
     fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>);
-    fn send_poly_share(&self, from_worker: usize, a_b_share_shifted: Vec<(T, T)>, stage: usize);
-    fn receive_poly_share(&self, stage: usize) -> Vec<(T, T)>;
+    fn send_share(&self, from_worker: usize, a_b_share_shifted: Vec<(T, T)>, stage: usize);
+    fn receive_share(&self, stage: usize) -> Vec<(T, T)>;
 }
