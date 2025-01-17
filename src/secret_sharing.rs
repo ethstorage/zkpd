@@ -7,7 +7,7 @@ pub struct SecretSharing<T: crate::FiniteField> {
 
 impl<T: crate::FiniteField> crate::SecretSharing<T> for SecretSharing<T> {
     fn share(secret: T, n: usize, t: usize) -> Vec<T> {
-        let mut poly = Vec::new();
+        let mut poly = Vec::with_capacity(t);
         poly.push(secret);
         for _ in 1..t {
             poly.push(T::random());

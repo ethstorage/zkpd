@@ -4,6 +4,7 @@ use std::iter;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 use zkpd::ff::bls12_381::Bls381K12Scalar;
 use zkpd::secret_sharing::SecretSharing as SecretSharingImpl;
 use zkpd::util::naive_mul;
@@ -26,8 +27,11 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
     ) -> Vec<Bls381K12Scalar> {
         let workers = self.workers.len();
         let product_coeffs = poly1.len() + poly2.len() - 1;
+        let mut start = Instant::now();
         let random_shares = setup_random_shares(workers, product_coeffs);
+        println!("setup_random_shares took: {:?}", start.elapsed());
 
+        start = Instant::now();
         let mut poly_shares1 = vec![];
         for _i in 0..workers {
             poly_shares1.push(vec![]);
@@ -48,6 +52,8 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
                 poly_shares2[i].push(shares[i].clone());
             }
         }
+        println!("setup poly_shares took: {:?}", start.elapsed());
+
         let output_shares: Vec<Vec<Bls381K12Scalar>> = self
             .workers
             .par_iter()
@@ -63,7 +69,8 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
 
         assert!(output_shares.len() == workers, "output_shares size wrong");
 
-        (0..product_coeffs)
+        start = Instant::now();
+        let result = (0..product_coeffs)
             .map(|coeff_index| {
                 let coeff_shares: Vec<Bls381K12Scalar> = (0..workers)
                     .map(|w| output_shares[w][coeff_index])
@@ -75,7 +82,9 @@ impl Delegator<Bls381K12Scalar> for ExampleDelegator<Bls381K12Scalar> {
                     self.workers.len(),
                 )
             })
-            .collect()
+            .collect();
+        println!("final recovery took: {:?}", start.elapsed());
+        result
     }
 
     fn new(workers: Vec<Arc<dyn WorkerClient<Bls381K12Scalar>>>) -> Self {
@@ -243,11 +252,13 @@ impl<T: FiniteField> WorkerClient<T> for ExampleWorkerClient<T> {
 }
 
 fn main() {
-    let n = 10;
+    let n = (1 << 4) + 10;
     let rand_poly1: Vec<Bls381K12Scalar> = (0..n).map(|_| Bls381K12Scalar::random()).collect();
     let rand_poly2: Vec<Bls381K12Scalar> = (0..n).map(|_| Bls381K12Scalar::random()).collect();
 
+    let mut start = Instant::now();
     let expected = naive_mul(&rand_poly1, &rand_poly2);
+    println!("naive_mul took: {:?}", start.elapsed());
 
     let w1 = ExampleWorker::<Bls381K12Scalar> {
         index: 1,
@@ -279,8 +290,10 @@ fn main() {
 
     let d = ExampleDelegator::<Bls381K12Scalar>::new(worker_clients);
 
+    start = Instant::now();
     let result: Vec<Bls381K12Scalar> = d.delegate(rand_poly1, rand_poly2);
-    println!("result:{:?}, expected:{:?}", result, expected);
+    println!("zkpd took: {:?}", start.elapsed());
+    // println!("result:{:?}, expected:{:?}", result, expected);
     assert!(result == expected);
     println!("recovered == expected");
 }
