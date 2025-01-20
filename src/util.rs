@@ -107,7 +107,7 @@ pub fn interpolate<T: FiniteField>(evaluations: &[T], n: usize) -> Vec<T> {
         for j in 0..n {
             if j != i {
                 let den = T::from_usize(i + 1).sub(&T::from_usize(j + 1));
-                term = naive_mul(&term, &[T::from_usize(j + 1).minus(), T::one()]);
+                term = naive_mul(&term, &[T::from_usize(j + 1).neg(), T::one()]);
                 term = scalar_div(&term, &den);
             }
         }

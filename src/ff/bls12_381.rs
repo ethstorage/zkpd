@@ -2,6 +2,7 @@ extern crate ff as ff2;
 
 use ff2::*;
 use rand::rngs::OsRng;
+use std::ops::{Add, Div, Mul};
 
 /// how does Bls381K12Scalar implement Send and Sync?
 /// FYI: https://doc.rust-lang.org/nomicon/send-and-sync.html
@@ -13,6 +14,14 @@ use rand::rngs::OsRng;
 #[PrimeFieldGenerator = "7"]
 #[PrimeFieldReprEndianness = "little"]
 pub struct Bls381K12Scalar([u64; 4]);
+
+impl<'a> Div<&'a Bls381K12Scalar> for Bls381K12Scalar {
+    type Output = Bls381K12Scalar;
+
+    fn div(self, rhs: &'a Bls381K12Scalar) -> Self::Output {
+        self * rhs.invert().unwrap()
+    }
+}
 
 impl crate::FiniteField for Bls381K12Scalar {
     fn random() -> Self {
@@ -33,24 +42,5 @@ impl crate::FiniteField for Bls381K12Scalar {
 
     fn horner_fold(partial: &Self, coef: &Self, point: &Self) -> Self {
         partial.mul(point).add(coef)
-    }
-
-    fn mul(self, other: &Self) -> Self {
-        self * other
-    }
-
-    fn sub(self, other: &Self) -> Self {
-        self - other
-    }
-
-    fn add(self, other: &Self) -> Self {
-        self + other
-    }
-
-    fn div(self, other: &Self) -> Self {
-        self * other.invert().unwrap()
-    }
-    fn minus(self) -> Self {
-        -self
     }
 }

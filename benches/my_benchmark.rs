@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
+use std::ops::{Add, Sub};
 use zkpd::ff::bls12_381::Bls381K12Scalar;
 use zkpd::secret_sharing::SecretSharing;
 use zkpd::{FiniteField, SecretSharing as SecretSharingTrait};
