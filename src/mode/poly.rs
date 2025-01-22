@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::util::{evaluations, interpolate, is_power_of_two};
 use crate::FiniteField;
+use std::time::Instant;
 
 pub trait Delegator<T: FiniteField> {
     fn new(workers: Vec<Arc<dyn WorkerClient<T>>>) -> Self;
@@ -33,8 +34,16 @@ pub trait Worker<T: FiniteField>: Base<T> {
         } else {
             a_poly_shares.len() + b_poly_shares.len() - 1
         };
+        let mut start = Instant::now();
         let a_evaluations = evaluations(&a_poly_shares, n);
         let b_evaluations = evaluations(&b_poly_shares, n);
+        println!(
+            "a/b poly evals took: {:?}, worker:{}",
+            start.elapsed(),
+            self.index()
+        );
+        start = Instant::now();
+
         let mut to_broadcast = vec![];
         for i in 0..n {
             let a_share = a_evaluations[i].clone();
@@ -45,8 +54,28 @@ pub trait Worker<T: FiniteField>: Base<T> {
             let b_share_shifted = b_share.sub(beta);
             to_broadcast.push((a_share_shifted, b_share_shifted));
         }
+        println!(
+            "prepare to_broadcast took: {:?}, worker:{}",
+            start.elapsed(),
+            self.index()
+        );
+        start = Instant::now();
+
         self.broadcast_poly(to_broadcast, stage);
+        println!(
+            "broadcast_poly took: {:?}, worker:{}",
+            start.elapsed(),
+            self.index()
+        );
+        start = Instant::now();
         let recovered_shares = self.wait_for_broadcast_poly(stage);
+        println!(
+            "wait_for_broadcast_poly took: {:?}, worker:{}",
+            start.elapsed(),
+            self.index()
+        );
+        start = Instant::now();
+
         let mut products = vec![];
         for (i, (recovered_a_share_shifted, recovered_b_share_shifted)) in
             recovered_shares.iter().enumerate()
@@ -65,7 +94,13 @@ pub trait Worker<T: FiniteField>: Base<T> {
                     ),
             );
         }
-        interpolate(&products, n)
+        let result = interpolate(&products, n);
+        println!(
+            "worker final interpolate took: {:?}, worker:{}",
+            start.elapsed(),
+            self.index()
+        );
+        result
     }
 
     fn broadcast_poly(&self, _a_b_share_shifted: Vec<(T, T)>, _stage: usize);
