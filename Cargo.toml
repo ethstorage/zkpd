@@ -3,7 +3,7 @@ name = "zkpd"
 version = "0.1.0"
 edition = "2021"
 # Specify the default binary to run
-default-run = "hello"
+default-run = "scalar"
 
 [dependencies]
 ff = { version = "0.13", features = ["derive"] }
@@ -18,8 +18,8 @@ name = "my_benchmark"
 harness = false
 
 [[bin]]
-name = "hello"
-path = "bin/hello.rs"
+name = "scalar"
+path = "bin/scalar.rs"
 
 [[bin]]
 name = "poly"
