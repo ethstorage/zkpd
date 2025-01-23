@@ -5,6 +5,11 @@ use zkpd::ff::bls12_381::Bls381K12Scalar;
 use zkpd::secret_sharing::SecretSharing;
 use zkpd::{FiniteField, SecretSharing as SecretSharingTrait};
 
+fn only_share(secret: &Bls381K12Scalar) {
+    let n = 3;
+    SecretSharing::share(secret.clone(), n, n);
+}
+
 fn share_recover(secret: &Bls381K12Scalar) {
     let n = 3;
     let shares = SecretSharing::share(secret.clone(), n, n);
@@ -42,6 +47,7 @@ fn naive_recover(shares: Vec<Bls381K12Scalar>) -> Bls381K12Scalar {
 
 fn criterion_benchmark(c: &mut Criterion) {
     let secret = Bls381K12Scalar::random();
+    c.bench_function("only_share", |b| b.iter(|| only_share(black_box(&secret))));
     c.bench_function("share_recover", |b| {
         b.iter(|| share_recover(black_box(&secret)))
     });
