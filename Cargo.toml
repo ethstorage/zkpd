@@ -15,7 +15,6 @@ clap = { git = "https://github.com/clap-rs/clap", branch = "master", features = 
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = "0.17"
 futures-util = "0.3"
-url = "2"
 
 [dev-dependencies]
 criterion = "0.5"

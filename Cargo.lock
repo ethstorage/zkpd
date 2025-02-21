@@ -1635,5 +1635,4 @@ dependencies = [
  "rayon",
  "tokio",
  "tokio-tungstenite",
- "url",
 ]

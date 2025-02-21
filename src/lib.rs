@@ -1,6 +1,7 @@
 pub mod beaver_triple_generatoor;
 pub mod ff;
 pub mod mode;
+pub mod p2p;
 pub mod secret_sharing;
 pub mod util;
 use std::ops::{Add, Div, Mul, Neg, Sub};
