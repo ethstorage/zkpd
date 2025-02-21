@@ -8,6 +8,7 @@ use crate::secret_sharing::SecretSharing as SecretSharingImpl;
 use crate::{FiniteField, SecretSharing};
 
 use tokio::net::TcpStream;
+use tokio::runtime::Runtime;
 
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
@@ -138,7 +139,8 @@ impl<T: FiniteField> ExampleWorkerClient<T> {
     fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>) {}
 
     fn work(&self, beaver_triple_shares: Vec<(T, T, T)>, input_shares: Vec<T>) -> Vec<T> {
-        tokio::runtime::Handle::current().block_on(async {
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
             // self.ws_stream.work(beaver_triple_shares, input_shares);
             vec![]
         })

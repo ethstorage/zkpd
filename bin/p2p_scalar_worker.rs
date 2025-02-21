@@ -2,7 +2,6 @@ use clap::Parser;
 use futures_util::{SinkExt, StreamExt};
 use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
-use tokio::time::{sleep, Duration as TokioDuration};
 use tokio_tungstenite::accept_async;
 use zkpd::ff::bls12_381::Bls381K12Scalar;
 use zkpd::p2p::scalar_worker::ExampleWorker;
@@ -25,9 +24,6 @@ async fn main() {
     let addr = format!("127.0.0.1:{}", args.port);
     println!("WebSocket server listening on: {}", addr);
     let listener = TcpListener::bind(addr).await.unwrap();
-
-    println!("Sleep 2s before connecting peers");
-    sleep(TokioDuration::from_secs(2)).await;
 
     let w = Arc::new(ExampleWorker::<Bls381K12Scalar> {
         index: args.index,
