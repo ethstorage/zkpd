@@ -9,6 +9,13 @@ default-run = "scalar"
 ff = { version = "0.13", features = ["derive"] }
 rand = "0.8"
 rayon = "1.7"
+clap = { git = "https://github.com/clap-rs/clap", branch = "master", features = [
+    "derive",
+] }
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.17"
+futures-util = "0.3"
+url = "2"
 
 [dev-dependencies]
 criterion = "0.5"
@@ -24,3 +31,13 @@ path = "bin/scalar.rs"
 [[bin]]
 name = "poly"
 path = "bin/poly.rs"
+
+[[bin]]
+name = "p2p_scalar_delegator"
+path = "bin/p2p_scalar_delegator.rs"
+
+
+[[bin]]
+name = "p2p_scalar_worker"
+path = "bin/p2p_scalar_worker.rs"
+clap = { version = "4", features = ["derive"] }
