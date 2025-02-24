@@ -1,16 +1,11 @@
-use core::panic;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::prelude::*;
-use std::collections::HashMap;
-use std::iter;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
+
+use std::sync::Arc;
 
 use clap::Parser;
-use futures_util::stream::{self, StreamExt};
 use zkpd::ff::bls12_381::Bls381K12Scalar;
-use zkpd::mode::scalar::{Base, Delegator, Worker, WorkerClient};
+use zkpd::mode::scalar::{Delegator, WorkerClient};
 use zkpd::p2p::scalar_worker::{parse_peer, ExampleWorkerClient};
 use zkpd::secret_sharing::SecretSharing as SecretSharingImpl;
 use zkpd::{
@@ -85,8 +80,7 @@ fn setup_random_shares(n: usize) -> Vec<Vec<(Bls381K12Scalar, Bls381K12Scalar, B
     result
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let x = Bls381K12Scalar::from_usize(100);
 
     let expected = x * x * x
@@ -98,14 +92,15 @@ async fn main() {
 
     let args = Args::parse();
 
-    let worker_clients = stream::iter(args.workers)
-        .then(|peer| async move {
+    let worker_clients = args
+        .workers
+        .iter()
+        .map(|peer| {
             let (id, url) = parse_peer(&peer);
-            Arc::new(ExampleWorkerClient::<Bls381K12Scalar>::new(id, url).await)
+            Arc::new(ExampleWorkerClient::<Bls381K12Scalar>::new(id, url))
                 as Arc<dyn WorkerClient<Bls381K12Scalar>>
         })
-        .collect()
-        .await;
+        .collect();
 
     let d = ExampleDelegator::<Bls381K12Scalar>::new(worker_clients);
 

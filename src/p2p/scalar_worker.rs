@@ -1,16 +1,19 @@
 use core::panic;
+use std::any::Any;
 use std::collections::HashMap;
-use std::iter;
 use std::sync::{Arc, Mutex};
+use std::{iter, thread};
 
 use crate::mode::scalar::{Base, Worker, WorkerClient};
 use crate::secret_sharing::SecretSharing as SecretSharingImpl;
 use crate::{FiniteField, SecretSharing};
 
-use tokio::net::TcpStream;
-use tokio::runtime::Runtime;
+use serde::{Deserialize, Serialize};
+use std::net::TcpStream;
 
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+use std::time::Duration;
+use tungstenite::protocol::WebSocket;
+use tungstenite::{connect, stream::MaybeTlsStream, Message};
 
 pub fn parse_peer(peer: &str) -> (usize, String) {
     let parts: Vec<&str> = peer.split('@').collect();
@@ -115,41 +118,162 @@ impl<T: FiniteField> Worker<T> for ExampleWorker<T> {
 
 use std::marker::PhantomData;
 
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Packet<T> {
+    SetPeerWorkersRequest(SetPeerWorkersRequest),
+    SetPeerWorkersResponse(SetPeerWorkersResponse),
+    WorkRequest(WorkRequest<T>),
+    WorkResponse(WorkResponse<T>),
+    SendShareRequest(SendShareRequest<T>),
+    SendShareResponse(SendShareResponse),
+    ReceiveShareRequest(ReceiveShareRequest),
+    ReceiveShareResponse(ReceiveShareResponse<T>),
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SetPeerWorkersRequest {
+    pub peers: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SetPeerWorkersResponse {}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WorkRequest<T> {
+    pub beaver_triple_shares: Vec<(T, T, T)>,
+    pub input_shares: Vec<T>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WorkResponse<T> {
+    pub shares: Vec<T>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SendShareRequest<T> {
+    pub from_worker: usize,
+    pub a_b_share_shifted: (T, T),
+    pub stage: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SendShareResponse {}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ReceiveShareRequest {
+    pub stage: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ReceiveShareResponse<T> {
+    pub a_b_share_shifted: (T, T),
+    pub found: bool,
+}
+
 pub struct ExampleWorkerClient<T: FiniteField> {
     _marker: PhantomData<T>,
     index: usize,
     url: String,
-    ws_stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    socket: Mutex<WebSocket<MaybeTlsStream<TcpStream>>>,
 }
 
 impl<T: FiniteField> ExampleWorkerClient<T> {
-    pub async fn new(index: usize, url: String) -> Self {
-        let ws_stream = tokio_tungstenite::connect_async(url.clone())
-            .await
-            .unwrap()
-            .0;
+    pub fn new(index: usize, url: String) -> Self {
+        let socket = connect(url.clone()).unwrap().0;
         ExampleWorkerClient {
             _marker: PhantomData,
             index,
             url,
-            ws_stream,
+            socket: Mutex::new(socket),
         }
     }
 
-    fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>) {}
+    fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>) {
+        let peers = peer_workers
+            .iter()
+            .map(|w| {
+                let client = (w as &dyn Any)
+                    .downcast_ref::<ExampleWorkerClient<T>>()
+                    .unwrap();
+                format!("{}@{}", w.index(), client.url)
+            })
+            .collect();
 
-    fn work(&self, beaver_triple_shares: Vec<(T, T, T)>, input_shares: Vec<T>) -> Vec<T> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            // self.ws_stream.work(beaver_triple_shares, input_shares);
-            vec![]
-        })
+        let encoded =
+            serde_json::to_string(&Packet::SetPeerWorkersRequest::<T>(SetPeerWorkersRequest {
+                peers,
+            }))
+            .unwrap();
+
+        let mut socket = self.socket.lock().unwrap();
+        socket.write(Message::Text(encoded)).unwrap();
+        let msg = socket.read().unwrap();
+        let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
+        match response {
+            Packet::SetPeerWorkersResponse(_) => return (),
+            _ => panic!("unexpected response"),
+        };
     }
 
-    fn send_share(&self, from_worker: usize, a_b_share_shifted: (T, T), stage: usize) {}
+    fn work(&self, beaver_triple_shares: Vec<(T, T, T)>, input_shares: Vec<T>) -> Vec<T> {
+        let encoded = serde_json::to_string(&Packet::WorkRequest(WorkRequest {
+            beaver_triple_shares: beaver_triple_shares,
+            input_shares: input_shares,
+        }))
+        .unwrap();
+
+        let mut socket = self.socket.lock().unwrap();
+        socket.write(Message::Text(encoded)).unwrap();
+        let msg = socket.read().unwrap();
+        let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
+        match response {
+            Packet::WorkResponse(WorkResponse { shares }) => return shares,
+            _ => panic!("unexpected response"),
+        };
+    }
+
+    fn send_share(&self, from_worker: usize, a_b_share_shifted: (T, T), stage: usize) {
+        let encoded = serde_json::to_string(&Packet::SendShareRequest(SendShareRequest {
+            from_worker,
+            a_b_share_shifted,
+            stage,
+        }))
+        .unwrap();
+
+        let mut socket = self.socket.lock().unwrap();
+        socket.write(Message::Text(encoded)).unwrap();
+        let msg = socket.read().unwrap();
+        let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
+        match response {
+            Packet::SendShareResponse(SendShareResponse {}) => return (),
+            _ => panic!("unexpected response"),
+        };
+    }
 
     fn receive_share(&self, stage: usize) -> (T, T) {
-        (T::zero(), T::zero())
+        let mut socket = self.socket.lock().unwrap();
+
+        loop {
+            let encoded =
+                serde_json::to_string(&Packet::<T>::ReceiveShareRequest(ReceiveShareRequest {
+                    stage,
+                }))
+                .unwrap();
+            socket.write(Message::Text(encoded)).unwrap();
+            let msg = socket.read().unwrap();
+            let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
+            match response {
+                Packet::ReceiveShareResponse(ReceiveShareResponse {
+                    a_b_share_shifted,
+                    found,
+                }) => {
+                    if found {
+                        return a_b_share_shifted;
+                    }
+                    thread::sleep(Duration::from_millis(100));
+                }
+                _ => panic!("unexpected response"),
+            };
+        }
     }
 }
 

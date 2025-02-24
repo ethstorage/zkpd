@@ -4,13 +4,17 @@ pub mod mode;
 pub mod p2p;
 pub mod secret_sharing;
 pub mod util;
+use serde::{Deserialize, Serialize};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 pub trait FiniteField:
-    Send
+    'static
+    + Send
     + Sync
     + PartialEq
     + Clone
+    + Serialize
+    + for<'a> Deserialize<'a>
     + for<'a> Add<&'a Self, Output = Self>
     + for<'a> Sub<&'a Self, Output = Self>
     + for<'a> Mul<&'a Self, Output = Self>

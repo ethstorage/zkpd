@@ -1,8 +1,9 @@
 use clap::Parser;
-use futures_util::{SinkExt, StreamExt};
+use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
-use tokio::net::TcpListener;
-use tokio_tungstenite::accept_async;
+use std::thread;
+use tungstenite::protocol::WebSocket;
+use tungstenite::{accept, protocol::Message};
 use zkpd::ff::bls12_381::Bls381K12Scalar;
 use zkpd::p2p::scalar_worker::ExampleWorker;
 
@@ -17,13 +18,12 @@ struct Args {
     port: u16,
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let args = Args::parse();
 
     let addr = format!("127.0.0.1:{}", args.port);
     println!("WebSocket server listening on: {}", addr);
-    let listener = TcpListener::bind(addr).await.unwrap();
+    let listener = TcpListener::bind(addr).unwrap();
 
     let w = Arc::new(ExampleWorker::<Bls381K12Scalar> {
         index: args.index,
@@ -31,35 +31,49 @@ async fn main() {
         stage_shares: Mutex::new(vec![]),
     });
 
-    while let Ok((stream, _)) = listener.accept().await {
-        let ws_stream = accept_async(stream)
-            .await
-            .expect("Error during WebSocket handshake");
-
-        tokio::spawn(handle_connection(w.clone(), ws_stream));
+    for stream in listener.incoming() {
+        match stream {
+            Err(e) => {
+                eprintln!("accept failed: {}", e);
+                continue;
+            }
+            Ok(stream) => {
+                // Accept the WebSocket connection
+                let websocket = accept(stream).unwrap();
+                println!("New connection established.");
+                let w = w.clone();
+                thread::spawn(move || {
+                    handle_connection(w, websocket);
+                });
+            }
+        }
     }
 }
 
-async fn handle_connection(
-    w: Arc<ExampleWorker<Bls381K12Scalar>>,
-    ws_stream: tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
-) {
-    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebSocket<TcpStream>) {
+    // Handle messages in a loop
+    loop {
+        let msg = websocket.read().unwrap();
 
-    while let Some(message) = ws_receiver.next().await {
-        match message {
-            Ok(msg) => {
-                println!("Received: {}", msg);
+        match msg {
+            Message::Text(text) => {
+                println!("Received: {}", text);
 
-                // Echo the message back
-                if let Err(e) = ws_sender.send(msg).await {
-                    eprintln!("Error sending message: {}", e);
+                // Assume the message format is "id:message"
+                let parts: Vec<&str> = text.split(':').collect();
+                if parts.len() == 2 {
+                    let id = parts[0];
+                    let response = format!("{}: Echo: {}", id, parts[1]);
+                    websocket.send(Message::Text(response)).unwrap();
+                } else {
+                    println!("Invalid message format.");
                 }
             }
-            Err(e) => {
-                eprintln!("Error reading message: {}", e);
+            Message::Close(_) => {
+                println!("Connection closed.");
                 break;
             }
+            _ => (),
         }
     }
 }

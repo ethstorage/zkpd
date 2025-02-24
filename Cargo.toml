@@ -12,9 +12,10 @@ rayon = "1.7"
 clap = { git = "https://github.com/clap-rs/clap", branch = "master", features = [
     "derive",
 ] }
-tokio = { version = "1", features = ["full"] }
-tokio-tungstenite = "0.17"
-futures-util = "0.3"
+
+tungstenite = "0.20"
+serde_json = { version = "1.0.135" }
+serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
 criterion = "0.5"
