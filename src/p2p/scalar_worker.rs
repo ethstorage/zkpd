@@ -188,12 +188,13 @@ impl<T: FiniteField> ExampleWorkerClient<T> {
 
     fn set_peer_workers(&self, peer_workers: Vec<Arc<dyn WorkerClient<T>>>) {
         let peers = peer_workers
-            .iter()
+            .into_iter()
             .map(|w| {
-                let client = (w as &dyn Any)
-                    .downcast_ref::<ExampleWorkerClient<T>>()
+                let index = w.index();
+                let client = (w as Arc<dyn Any + Sync + Send>)
+                    .downcast::<ExampleWorkerClient<T>>()
                     .unwrap();
-                format!("{}@{}", w.index(), client.url)
+                format!("{}@{}", index, client.url)
             })
             .collect();
 
