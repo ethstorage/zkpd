@@ -5,7 +5,11 @@ use std::thread;
 use tungstenite::protocol::WebSocket;
 use tungstenite::{accept, protocol::Message};
 use zkpd::ff::bls12_381::Bls381K12Scalar;
-use zkpd::p2p::scalar_worker::ExampleWorker;
+use zkpd::mode::scalar::{Base, Worker, WorkerClient};
+use zkpd::p2p::scalar_worker::{
+    parse_peer, ExampleWorker, ExampleWorkerClient, Packet, ReceiveShareResponse,
+    SendShareResponse, SetPeerWorkersResponse, WorkResponse,
+};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -59,6 +63,57 @@ fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebS
             Message::Text(text) => {
                 println!("Received: {}", text);
 
+                let response: Packet<Bls381K12Scalar> = serde_json::from_str(&text).unwrap();
+                match response {
+                    Packet::SetPeerWorkersRequest(req) => {
+                        let workers = req
+                            .peers
+                            .iter()
+                            .map(|peer| {
+                                let (id, url) = parse_peer(peer);
+                                Arc::new(ExampleWorkerClient::<Bls381K12Scalar>::new(id, url))
+                                    as Arc<dyn WorkerClient<Bls381K12Scalar>>
+                            })
+                            .collect();
+                        let mut peer_workers = w.peer_workers.lock().unwrap();
+                        *peer_workers = workers;
+                        println!("Set peer workers: {:?}", req.peers);
+                        let response = Packet::<Bls381K12Scalar>::SetPeerWorkersResponse(
+                            SetPeerWorkersResponse {},
+                        );
+                        let encoded = serde_json::to_string(&response).unwrap();
+                        websocket.send(Message::Text(encoded)).unwrap();
+                    }
+                    Packet::SendShareRequest(req) => {
+                        w.insert_share(req.stage, req.from_worker, req.a_b_share_shifted);
+                        let response =
+                            Packet::<Bls381K12Scalar>::SendShareResponse(SendShareResponse {});
+                        let encoded = serde_json::to_string(&response).unwrap();
+                        websocket.send(Message::Text(encoded)).unwrap();
+                    }
+                    Packet::WorkRequest(req) => {
+                        let shares = w.work(req.beaver_triple_shares, req.input_shares);
+                        let response = Packet::<Bls381K12Scalar>::WorkResponse(WorkResponse::<
+                            Bls381K12Scalar,
+                        > {
+                            shares,
+                        });
+                        let encoded = serde_json::to_string(&response).unwrap();
+                        websocket.send(Message::Text(encoded)).unwrap();
+                    }
+                    Packet::ReceiveShareRequest(req) => {
+                        let a_b_share_shifted = w.get_share(req.stage, w.index());
+                        let response =
+                            Packet::<Bls381K12Scalar>::ReceiveShareResponse(ReceiveShareResponse {
+                                a_b_share_shifted,
+                            });
+                        let encoded = serde_json::to_string(&response).unwrap();
+                        websocket.send(Message::Text(encoded)).unwrap();
+                    }
+                    _ => {
+                        println!("Unexpected message.");
+                    }
+                }
                 // Assume the message format is "id:message"
                 let parts: Vec<&str> = text.split(':').collect();
                 if parts.len() == 2 {
@@ -73,7 +128,10 @@ fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebS
                 println!("Connection closed.");
                 break;
             }
-            _ => (),
+            _ => {
+                println!("Unexpected message, quit.");
+                break;
+            }
         }
     }
 }

@@ -32,7 +32,7 @@ pub struct ExampleWorker<T: FiniteField> {
 }
 
 impl<T: FiniteField> ExampleWorker<T> {
-    fn insert_share(&self, stage: usize, from_worker: usize, a_b_share_shifted: (T, T)) {
+    pub fn insert_share(&self, stage: usize, from_worker: usize, a_b_share_shifted: (T, T)) {
         let mut stage_shares = self.stage_shares.lock().unwrap();
         if stage_shares.len() == stage {
             stage_shares.push(HashMap::new());
@@ -43,7 +43,7 @@ impl<T: FiniteField> ExampleWorker<T> {
         stage_shares[stage].insert(from_worker, a_b_share_shifted);
     }
 
-    fn get_share(&self, stage: usize, from_worker: usize) -> Option<(T, T)> {
+    pub fn get_share(&self, stage: usize, from_worker: usize) -> Option<(T, T)> {
         let stage_shares = self.stage_shares.lock().unwrap();
         stage_shares[stage]
             .get(&from_worker)
@@ -165,8 +165,7 @@ pub struct ReceiveShareRequest {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ReceiveShareResponse<T> {
-    pub a_b_share_shifted: (T, T),
-    pub found: bool,
+    pub a_b_share_shifted: Option<(T, T)>,
 }
 
 pub struct ExampleWorkerClient<T: FiniteField> {
@@ -262,12 +261,9 @@ impl<T: FiniteField> ExampleWorkerClient<T> {
             let msg = socket.read().unwrap();
             let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
             match response {
-                Packet::ReceiveShareResponse(ReceiveShareResponse {
-                    a_b_share_shifted,
-                    found,
-                }) => {
-                    if found {
-                        return a_b_share_shifted;
+                Packet::ReceiveShareResponse(ReceiveShareResponse { a_b_share_shifted }) => {
+                    if a_b_share_shifted.is_some() {
+                        return a_b_share_shifted.unwrap();
                     }
                     thread::sleep(Duration::from_millis(100));
                 }
