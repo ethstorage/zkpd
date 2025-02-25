@@ -83,6 +83,7 @@ fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebS
                         );
                         let encoded = serde_json::to_string(&response).unwrap();
                         websocket.send(Message::Text(encoded)).unwrap();
+                        websocket.flush().unwrap();
                     }
                     Packet::SendShareRequest(req) => {
                         w.insert_share(req.stage, req.from_worker, req.a_b_share_shifted);
@@ -90,6 +91,7 @@ fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebS
                             Packet::<Bls381K12Scalar>::SendShareResponse(SendShareResponse {});
                         let encoded = serde_json::to_string(&response).unwrap();
                         websocket.send(Message::Text(encoded)).unwrap();
+                        websocket.flush().unwrap();
                     }
                     Packet::WorkRequest(req) => {
                         let shares = w.work(req.beaver_triple_shares, req.input_shares);
@@ -100,6 +102,7 @@ fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebS
                         });
                         let encoded = serde_json::to_string(&response).unwrap();
                         websocket.send(Message::Text(encoded)).unwrap();
+                        websocket.flush().unwrap();
                     }
                     Packet::ReceiveShareRequest(req) => {
                         let a_b_share_shifted = w.get_share(req.stage, w.index());
@@ -109,19 +112,11 @@ fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebS
                             });
                         let encoded = serde_json::to_string(&response).unwrap();
                         websocket.send(Message::Text(encoded)).unwrap();
+                        websocket.flush().unwrap();
                     }
                     _ => {
                         println!("Unexpected message.");
                     }
-                }
-                // Assume the message format is "id:message"
-                let parts: Vec<&str> = text.split(':').collect();
-                if parts.len() == 2 {
-                    let id = parts[0];
-                    let response = format!("{}: Echo: {}", id, parts[1]);
-                    websocket.send(Message::Text(response)).unwrap();
-                } else {
-                    println!("Invalid message format.");
                 }
             }
             Message::Close(_) => {

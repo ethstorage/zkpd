@@ -203,9 +203,11 @@ impl<T: FiniteField> ExampleWorkerClient<T> {
                 peers,
             }))
             .unwrap();
+        println!("SetPeerWorkersRequest: {}", encoded);
 
         let mut socket = self.socket.lock().unwrap();
         socket.write(Message::Text(encoded)).unwrap();
+        socket.flush().unwrap();
         let msg = socket.read().unwrap();
         let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
         match response {
@@ -223,6 +225,7 @@ impl<T: FiniteField> ExampleWorkerClient<T> {
 
         let mut socket = self.socket.lock().unwrap();
         socket.write(Message::Text(encoded)).unwrap();
+        socket.flush().unwrap();
         let msg = socket.read().unwrap();
         let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
         match response {
@@ -241,6 +244,7 @@ impl<T: FiniteField> ExampleWorkerClient<T> {
 
         let mut socket = self.socket.lock().unwrap();
         socket.write(Message::Text(encoded)).unwrap();
+        socket.flush().unwrap();
         let msg = socket.read().unwrap();
         let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
         match response {
@@ -259,6 +263,7 @@ impl<T: FiniteField> ExampleWorkerClient<T> {
                 }))
                 .unwrap();
             socket.write(Message::Text(encoded)).unwrap();
+            socket.flush().unwrap();
             let msg = socket.read().unwrap();
             let response: Packet<T> = serde_json::from_str(&msg.to_text().unwrap()).unwrap();
             match response {
