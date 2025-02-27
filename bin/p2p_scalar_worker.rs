@@ -105,6 +105,9 @@ fn handle_connection(
                         let encoded = serde_json::to_string(&response).unwrap();
                         websocket.send(Message::Text(encoded)).unwrap();
                         websocket.flush().unwrap();
+                        // clear state when work is done, enough for demo purpose
+                        *w.peer_workers.lock().unwrap() = vec![];
+                        *w.stage_shares.lock().unwrap() = vec![];
                     }
                     Packet::ReceiveShareRequest(req) => {
                         let a_b_share_shifted = w.get_share(req.stage, w.index());
