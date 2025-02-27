@@ -53,11 +53,13 @@ fn main() {
         }
     }
 }
-
-fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebSocket<TcpStream>) {
+fn handle_connection(
+    w: Arc<ExampleWorker<Bls381K12Scalar>>,
+    mut websocket: WebSocket<TcpStream>,
+) -> Result<(), tungstenite::Error> {
     // Handle messages in a loop
     loop {
-        let msg = websocket.read().unwrap();
+        let msg = websocket.read()?;
 
         match msg {
             Message::Text(text) => {
@@ -129,4 +131,6 @@ fn handle_connection(w: Arc<ExampleWorker<Bls381K12Scalar>>, mut websocket: WebS
             }
         }
     }
+
+    Ok(())
 }
