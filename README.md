@@ -9,9 +9,13 @@
 
 ################ single process testing ################
 
+########################################################
 # test for polynomial evaluation in a single process
+########################################################
 cargo run
+########################################################
 # test for polynomial multiplication in a single process
+########################################################
 cargo run --bin poly
 
 ################ multiple process testing ##############
